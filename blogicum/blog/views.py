@@ -5,11 +5,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.urls import reverse
-from django.views.generic import (
-    CreateView,
-    UpdateView,
-    DeleteView
-)
+from django.views.generic import CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Post, Category, Comment
@@ -24,20 +20,17 @@ def get_published_posts(queryset=None):
     """Возвращает queryset с опубликованными постами.
 
     Args:
-        queryset: Опциональный базовый queryset. Если None, использует Post.objects.all()
+        queryset: Опциональный базовый queryset.
+        Если None, использует Post.objects.all()
     """
     if queryset is None:
         queryset = Post.objects.all()
 
-    return (
-        queryset
-        .filter(
-            pub_date__lte=timezone.now(),
-            is_published=True,
-            category__is_published=True,
-        )
-        .select_related("author", "location", "category")
-    )
+    return queryset.filter(
+        pub_date__lte=timezone.now(),
+        is_published=True,
+        category__is_published=True,
+    ).select_related("author", "location", "category")
 
 
 def annotate_comment_count(queryset):
@@ -63,9 +56,8 @@ def paginate_queryset(request, queryset, per_page=POSTS_PER_PAGE):
 
 def index(request):
     """Главная страница."""
-    post_list = (
-        annotate_comment_count(get_published_posts())
-        .order_by(*Post._meta.ordering)
+    post_list = annotate_comment_count(get_published_posts()).order_by(
+        *Post._meta.ordering
     )
     page_obj = paginate_queryset(request, post_list)
     context = {"page_obj": page_obj}
@@ -103,12 +95,9 @@ def category_posts(request, category_slug):
     category = get_object_or_404(
         Category, slug=category_slug, is_published=True
     )
-    post_list = (
-        annotate_comment_count(
-            get_published_posts(category.posts.all())
-        )
-        .order_by(*Post._meta.ordering)
-    )
+    post_list = annotate_comment_count(
+        get_published_posts(category.posts.all())
+    ).order_by(*Post._meta.ordering)
     page_obj = paginate_queryset(request, post_list)
     context = {"category": category, "page_obj": page_obj}
     return render(request, "blog/category.html", context)
@@ -120,21 +109,16 @@ def profile(request, username):
 
     if request.user == profile_user:
         # Автор видит все свои посты
-        post_list = (
-            annotate_comment_count(
-                profile_user.posts
-                .select_related("author", "location", "category")
+        post_list = annotate_comment_count(
+            profile_user.posts.select_related(
+                "author", "location", "category"
             )
-            .order_by(*Post._meta.ordering)
-        )
+        ).order_by(*Post._meta.ordering)
     else:
         # Остальные видят только опубликованные посты
-        post_list = (
-            annotate_comment_count(
-                get_published_posts(profile_user.posts.all())
-            )
-            .order_by(*Post._meta.ordering)
-        )
+        post_list = annotate_comment_count(
+            get_published_posts(profile_user.posts.all())
+        ).order_by(*Post._meta.ordering)
 
     page_obj = paginate_queryset(request, post_list)
     context = {"profile": profile_user, "page_obj": page_obj}
@@ -234,7 +218,9 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse("blog:post_detail", kwargs={"post_id": self.object.post.pk})
+        return reverse(
+            "blog:post_detail", kwargs={"post_id": self.object.post.pk}
+        )
 
 
 class CommentDeleteView(LoginRequiredMixin, DeleteView):
@@ -251,4 +237,6 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse("blog:post_detail", kwargs={"post_id": self.object.post.pk})
+        return reverse(
+            "blog:post_detail", kwargs={"post_id": self.object.post.pk}
+        )
